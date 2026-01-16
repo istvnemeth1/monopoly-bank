@@ -1,0 +1,13 @@
+{
+  "name": "monopoly-bank",
+  "version": "1.0.0",
+  "description": "Monopoly money control app with real-time updates",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4"
+  }
+}

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Monopoly Bank</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="main">
+    <h1>Monopoly Bank</h1>
+    <div id="join-section">
+      <input id="name" type="text" placeholder="Your name" maxlength="12">
+      <input id="room" type="text" placeholder="Room code (leave blank to create)">
+      <button id="join-btn">Join / Create Room</button>
+      <div id="error" class="error"></div>
+    </div>
+    <div id="game-section" class="hidden">
+      <h2 id="room-title"></h2>
+      <div id="players"></div>
+      <div id="banker-controls" class="hidden">
+        <h3>Banker Controls</h3>
+        <div id="control-panel"></div>
+        <button id="reset-btn">Reset Game</button>
+      </div>
+      <button id="leave-btn">Leave Room</button>
+    </div>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
