@@ -2,6 +2,7 @@
 // Handles all frontend logic for Monopoly Bank
 
 
+
 const socket = io();
 let myId = null;
 let myRoom = null;
@@ -9,28 +10,32 @@ let isBanker = false;
 let bankerId = null;
 let currentPlayers = {};
 let currentSalary = 200;
+let gameEnded = false;
 
 // Elements
 const setupDiv = document.getElementById('setup');
 const gameDiv = document.getElementById('game');
 const roomInfo = document.getElementById('roomInfo');
 const playersDiv = document.getElementById('players');
-const bankerControls = document.getElementById('bankerControls');
 const setupError = document.getElementById('setupError');
 const roomClosedDiv = document.getElementById('roomClosed');
+const bankIcon = document.getElementById('bankIcon');
+const payModal = document.getElementById('payModal');
+const payModalTitle = document.getElementById('payModalTitle');
+const payModalPlayer = document.getElementById('payModalPlayer');
+const payModalAmount = document.getElementById('payModalAmount');
+const payModalError = document.getElementById('payModalError');
+const payModalConfirm = document.getElementById('payModalConfirm');
+const payModalCancel = document.getElementById('payModalCancel');
+const bankerPanel = document.getElementById('bankerPanel');
 const salaryInput = document.getElementById('salaryInput');
 const setSalaryBtn = document.getElementById('setSalaryBtn');
-const playerPayDiv = document.getElementById('playerPay');
-const payTo = document.getElementById('payTo');
-const payAmount = document.getElementById('payAmount');
-const payBtn = document.getElementById('payBtn');
-const payError = document.getElementById('payError');
-const customModal = document.getElementById('customModal');
-const customModalTitle = document.getElementById('customModalTitle');
-const customAmountInput = document.getElementById('customAmountInput');
-const customAmountConfirm = document.getElementById('customAmountConfirm');
-const customAmountCancel = document.getElementById('customAmountCancel');
-const customAmountError = document.getElementById('customAmountError');
+const bankerPlayers = document.getElementById('bankerPlayers');
+const resetBtn = document.getElementById('resetBtn');
+const endGameBtn = document.getElementById('endGameBtn');
+const closeBankerPanel = document.getElementById('closeBankerPanel');
+const leaderboardModal = document.getElementById('leaderboardModal');
+const leaderboardList = document.getElementById('leaderboardList');
 
 // Create Room (Banker)
 document.getElementById('createRoomBtn').onclick = () => {
@@ -58,91 +63,57 @@ function showGame() {
   roomInfo.textContent = `Room: ${myRoom}`;
   document.getElementById('leaveBtn').onclick = () => location.reload();
   if (isBanker) {
-    bankerControls.style.display = '';
-    playerPayDiv.style.display = 'none';
+    bankIcon.style.display = '';
   } else {
-    bankerControls.style.display = 'none';
-    playerPayDiv.style.display = '';
+    bankIcon.style.display = 'none';
   }
 }
 
 
 // Render players and balances
-function renderPlayers(players, banker, salary) {
+function renderPlayers(players, banker, salary, ended) {
   myId = socket.id;
   bankerId = banker;
   currentPlayers = players;
   currentSalary = salary || 200;
+  gameEnded = !!ended;
   playersDiv.innerHTML = '';
   Object.entries(players).forEach(([id, player]) => {
     const div = document.createElement('div');
     div.className = 'player' + (id === banker ? ' banker' : '');
     div.innerHTML = `
-      <span>${player.name} ${id === banker ? '(Banker)' : ''}</span>
+      <span class="player-name" data-id="${id}" style="cursor:${id!==myId&&!ended?'pointer':'default'};text-decoration:${id!==myId&&!ended?'underline':'none'};">${player.name} ${id === banker ? '(Banker)' : ''}</span>
       <span>£${player.balance}</span>
     `;
-    // Banker controls for each player
-    if (isBanker && id !== banker) {
-      const controls = document.createElement('span');
-      controls.className = 'controls';
-      [-100, -10, -1, 1, 10, 100].forEach(amount => {
-        const btn = document.createElement('button');
-        btn.textContent = (amount > 0 ? '+' : '') + amount;
-        btn.onclick = () => {
-          socket.emit('changeBalance', { playerId: id, amount });
-        };
-        controls.appendChild(btn);
-      });
-      // Custom add/remove
-      const customAdd = document.createElement('button');
-      customAdd.textContent = '+Custom';
-      customAdd.onclick = () => openCustomModal(id, 'add');
-      controls.appendChild(customAdd);
-      const customRemove = document.createElement('button');
-      customRemove.textContent = '-Custom';
-      customRemove.onclick = () => openCustomModal(id, 'remove');
-      controls.appendChild(customRemove);
-      // Salary button
-      const salaryBtn = document.createElement('button');
-      salaryBtn.textContent = 'Salary (£' + currentSalary + ')';
-      salaryBtn.onclick = () => socket.emit('giveSalary', id);
-      controls.appendChild(salaryBtn);
-      div.appendChild(controls);
-    }
     playersDiv.appendChild(div);
   });
 
-  // Player pay UI
-  if (!isBanker) {
-    payTo.innerHTML = '';
-    Object.entries(players).forEach(([id, player]) => {
-      if (id !== myId) {
-        const opt = document.createElement('option');
-        opt.value = id;
-        opt.textContent = player.name;
-        payTo.appendChild(opt);
-      }
-    });
-  }
+  // Add click listeners for player-to-player payment
+  document.querySelectorAll('.player-name').forEach(el => {
+    const pid = el.getAttribute('data-id');
+    if (pid !== myId && !gameEnded) {
+      el.onclick = () => openPayModal(pid);
+    }
+  });
 }
 
 // Socket events for player list
-socket.on('updatePlayers', (players, banker, salary) => {
-  renderPlayers(players, banker, salary);
+socket.on('updatePlayers', (players, banker, salary, ended) => {
+  renderPlayers(players, banker, salary, ended);
 });
 
-socket.on('roomCreated', ({ code, players, salary }) => {
+socket.on('roomCreated', ({ code, players, salary, bankerId }) => {
   myRoom = code;
   isBanker = true;
   showGame();
-  renderPlayers(players, socket.id, salary);
+  renderPlayers(players, socket.id, salary, false);
 });
 
-socket.on('roomJoined', ({ code, players, bankerId, salary }) => {
+socket.on('roomJoined', ({ code, players, bankerId: bId, salary, ended }) => {
   myRoom = code;
-  isBanker = (socket.id === bankerId);
+  isBanker = (socket.id === bId);
   showGame();
-  renderPlayers(players, bankerId, salary);
+  renderPlayers(players, bId, salary, ended);
 });
 
 socket.on('errorMsg', msg => {
@@ -155,57 +126,114 @@ document.getElementById('resetBtn').onclick = () => {
   }
 };
 
-// Banker: Set salary
-if (setSalaryBtn) {
-  setSalaryBtn.onclick = () => {
-    const val = parseInt(salaryInput.value, 10);
-    if (isNaN(val) || val < 1 || val > 10000) {
-      salaryInput.value = currentSalary;
-      return;
-    }
-    socket.emit('setSalary', val);
-  };
-}
 
-// Custom add/remove modal logic (banker)
-let customTargetId = null;
-let customType = null;
-function openCustomModal(playerId, type) {
-  customTargetId = playerId;
-  customType = type;
-  customModalTitle.textContent = (type === 'add' ? 'Add Custom Amount' : 'Remove Custom Amount');
-  customAmountInput.value = '';
-  customAmountError.textContent = '';
-  customModal.style.display = 'flex';
+// --- Player-to-player payment modal logic ---
+let payTargetId = null;
+function openPayModal(playerId) {
+  if (gameEnded) return;
+  payTargetId = playerId;
+  payModalPlayer.textContent = `Pay ${currentPlayers[playerId].name}`;
+  payModalAmount.value = '';
+  payModalError.textContent = '';
+  payModal.style.display = 'flex';
 }
-if (customAmountCancel) customAmountCancel.onclick = () => { customModal.style.display = 'none'; };
-if (customAmountConfirm) customAmountConfirm.onclick = () => {
-  const val = parseInt(customAmountInput.value, 10);
-  if (isNaN(val) || val < 1 || val > 100000) {
-    customAmountError.textContent = 'Enter a valid amount.';
-    return;
-  }
-  const amt = customType === 'add' ? val : -val;
-  socket.emit('changeBalance', { playerId: customTargetId, amount: amt });
-  customModal.style.display = 'none';
-};
-
-// Player pay logic
-if (payBtn) payBtn.onclick = () => {
-  payError.textContent = '';
-  const toId = payTo.value;
-  const amt = parseInt(payAmount.value, 10);
-  if (!toId || isNaN(amt) || amt < 1 || amt > 100000) {
-    payError.textContent = 'Enter a valid amount and select a player.';
+if (payModalCancel) payModalCancel.onclick = () => { payModal.style.display = 'none'; };
+if (payModalConfirm) payModalConfirm.onclick = () => {
+  const amt = parseInt(payModalAmount.value, 10);
+  if (!payTargetId || isNaN(amt) || amt < 1 || amt > 100000) {
+    payModalError.textContent = 'Enter a valid amount.';
     return;
   }
   if (currentPlayers[myId].balance < amt) {
-    payError.textContent = 'Insufficient funds.';
+    payModalError.textContent = 'Insufficient funds.';
     return;
   }
-  socket.emit('playerPay', { toId, amount: amt });
-  payAmount.value = '';
+  socket.emit('playerPay', { toId: payTargetId, amount: amt }, (res) => {
+    if (res && res.error) {
+      payModalError.textContent = res.error;
+    } else {
+      payModal.style.display = 'none';
+    }
+  });
 };
+
+// --- Banker Control Panel logic ---
+if (bankIcon) bankIcon.onclick = () => {
+  if (!isBanker) return;
+  renderBankerPanel();
+  bankerPanel.style.display = 'flex';
+};
+if (closeBankerPanel) closeBankerPanel.onclick = () => {
+  bankerPanel.style.display = 'none';
+};
+
+function renderBankerPanel() {
+  // Salary input
+  salaryInput.value = currentSalary;
+  // Player controls
+  bankerPlayers.innerHTML = '';
+  Object.entries(currentPlayers).forEach(([id, player]) => {
+    const row = document.createElement('div');
+    row.className = 'banker-row';
+    row.innerHTML = `<b>${player.name}${id === bankerId ? ' (Banker)' : ''}</b> <span>£${player.balance}</span>`;
+    if (!gameEnded) {
+      // Add, Remove, Salary buttons
+      ['add', 'remove', 'salary'].forEach(action => {
+        const btn = document.createElement('button');
+        if (action === 'add') btn.textContent = '➕';
+        if (action === 'remove') btn.textContent = '➖';
+        if (action === 'salary') btn.textContent = '💰';
+        btn.onclick = () => {
+          if (action === 'salary') {
+            socket.emit('bankerAction', { action, playerId: id });
+          } else {
+            const val = prompt(`Amount to ${action === 'add' ? 'add' : 'remove'}:`);
+            const amount = parseInt(val, 10);
+            if (!isNaN(amount) && amount > 0 && amount <= 100000) {
+              socket.emit('bankerAction', { action, playerId: id, amount });
+            }
+          }
+        };
+        row.appendChild(btn);
+      });
+    }
+    bankerPlayers.appendChild(row);
+  });
+}
+
+if (setSalaryBtn) setSalaryBtn.onclick = () => {
+  const val = parseInt(salaryInput.value, 10);
+  if (isNaN(val) || val < 1 || val > 10000) {
+    salaryInput.value = currentSalary;
+    return;
+  }
+  socket.emit('setSalary', val);
+};
+
+if (resetBtn) resetBtn.onclick = () => {
+  if (confirm('Reset all balances to £1500?')) {
+    socket.emit('resetGame');
+    bankerPanel.style.display = 'none';
+  }
+};
+
+if (endGameBtn) endGameBtn.onclick = () => {
+  if (confirm('Are you sure you want to end the game?')) {
+    socket.emit('endGame');
+    bankerPanel.style.display = 'none';
+  }
+};
+
+// --- Leaderboard logic ---
+socket.on('gameEnded', (leaderboard) => {
+  leaderboardList.innerHTML = '';
+  leaderboard.forEach(entry => {
+    const li = document.createElement('li');
+    li.textContent = `${entry.name}: £${entry.balance}`;
+    leaderboardList.appendChild(li);
+  });
+  leaderboardModal.style.display = 'flex';
+});
 
 // Room closed by Banker
 socket.on('roomClosed', () => {

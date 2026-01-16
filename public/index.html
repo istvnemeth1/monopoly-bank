@@ -32,15 +32,6 @@
         <h3>Pay Another Player</h3>
         <select id="payTo"></select>
         <input id="payAmount" type="number" min="1" placeholder="Amount (£)" style="width:100px;" />
-        <button id="payBtn">Pay</button>
-        <div id="payError" class="error"></div>
-      </div>
-      </div>
-      <button id="leaveBtn">Leave Room</button>
-    </div>
-    <div id="roomClosed" style="display:none;">
-      <h2>Room closed by Banker.</h2>
-      <button onclick="location.reload()">Back to Start</button>
     </div>
   <!-- Modal for custom add/remove (banker) -->
   <div id="customModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0008;z-index:10;align-items:center;justify-content:center;">
@@ -55,5 +46,45 @@
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="script.js"></script>
+
+        <!-- Player-to-player payment modal -->
+        <div id="payModal" class="modal" style="display:none;">
+          <div class="modal-content">
+            <h3 id="payModalTitle">Pay player</h3>
+            <div id="payModalPlayer"></div>
+            <input id="payModalAmount" type="number" min="1" max="100000" placeholder="Amount (£)" />
+            <div id="payModalError" class="error"></div>
+            <button id="payModalConfirm">Confirm</button>
+            <button id="payModalCancel">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Banker Control Panel modal -->
+        <div id="bankerPanel" class="modal" style="display:none;">
+          <div class="modal-content" style="max-width:400px;">
+            <h2>Banker Control Panel</h2>
+            <div style="margin-bottom:1em;">
+              <label for="salaryInput"><b>Salary amount (£):</b></label>
+              <input id="salaryInput" type="number" min="1" max="10000" value="200" style="width:100px;display:inline-block;" />
+              <button id="setSalaryBtn">Set</button>
+            </div>
+            <div id="bankerPlayers"></div>
+            <button id="resetBtn">Reset Game</button>
+            <button id="endGameBtn" style="background:#c00;">End Game</button>
+            <button id="closeBankerPanel">Close</button>
+          </div>
+        </div>
+
+        <!-- Leaderboard modal -->
+        <div id="leaderboardModal" class="modal" style="display:none;">
+          <div class="modal-content" style="max-width:400px;">
+            <h2>Game Over</h2>
+            <h3>Leaderboard</h3>
+            <ol id="leaderboardList"></ol>
+            <button onclick="location.reload()">Back to Start</button>
+          </div>
+        </div>
 </body>
 </html>
