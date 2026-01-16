@@ -9,21 +9,26 @@
 <body>
   <div id="main">
     <h1>Monopoly Bank</h1>
-    <div id="join-section">
-      <input id="name" type="text" placeholder="Your name" maxlength="12">
-      <input id="room" type="text" placeholder="Room code (leave blank to create)">
-      <button id="join-btn">Join / Create Room</button>
-      <div id="error" class="error"></div>
+    <div id="setup">
+      <button id="createRoomBtn">Create Room (Banker)</button>
+      <hr>
+      <input id="joinRoomCode" maxlength="4" placeholder="Room Code" />
+      <input id="joinName" maxlength="12" placeholder="Your Name" />
+      <button id="joinRoomBtn">Join Room</button>
+      <div id="setupError" class="error"></div>
     </div>
-    <div id="game-section" class="hidden">
-      <h2 id="room-title"></h2>
+    <div id="game" style="display:none;">
+      <div id="roomInfo"></div>
       <div id="players"></div>
-      <div id="banker-controls" class="hidden">
+      <div id="bankerControls" style="display:none;">
         <h3>Banker Controls</h3>
-        <div id="control-panel"></div>
-        <button id="reset-btn">Reset Game</button>
+        <button id="resetBtn">Reset Game</button>
       </div>
-      <button id="leave-btn">Leave Room</button>
+      <button id="leaveBtn">Leave Room</button>
+    </div>
+    <div id="roomClosed" style="display:none;">
+      <h2>Room closed by Banker.</h2>
+      <button onclick="location.reload()">Back to Start</button>
     </div>
   </div>
   <script src="/socket.io/socket.io.js"></script>
