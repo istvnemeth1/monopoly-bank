@@ -55,6 +55,40 @@ button:hover {
 .controls {
   display: flex;
   gap: 0.3em;
+  flex-wrap: wrap;
+}
+
+#playerPay {
+  background: #f3f3ff;
+  border-radius: 8px;
+  padding: 1em;
+  margin-bottom: 1em;
+}
+
+#playerPay select, #playerPay input, #playerPay button {
+  margin: 0.2em 0.2em 0.2em 0;
+  width: auto;
+  display: inline-block;
+}
+
+#customModal {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: #0008;
+  z-index: 10;
+  align-items: center;
+  justify-content: center;
+}
+#customModal[style*="display: flex"] {
+  display: flex !important;
+}
+#customModal input {
+  margin: 0.5em 0;
+}
+#customModal button {
+  width: auto;
+  margin-right: 0.5em;
 }
 .error {
   color: #c00;

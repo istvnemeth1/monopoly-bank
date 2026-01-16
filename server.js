@@ -22,6 +22,7 @@ function generateRoomCode() {
   return code;
 }
 
+
 // Socket.IO connection handler
 io.on('connection', (socket) => {
   // Store current room and role for this socket
@@ -36,13 +37,14 @@ io.on('connection', (socket) => {
     rooms[code] = {
       bankerId: socket.id,
       players: {},
+      salary: 200 // Default salary
     };
-    rooms[code].players[socket.id] = { name, balance: 1500 }; // Banker starts with £1500
+    rooms[code].players[socket.id] = { name, balance: 1500 };
     socket.data.room = code;
     socket.data.role = 'banker';
     socket.join(code);
-    io.to(socket.id).emit('roomCreated', { code, players: rooms[code].players });
-    io.to(code).emit('updatePlayers', rooms[code].players);
+    io.to(socket.id).emit('roomCreated', { code, players: rooms[code].players, salary: rooms[code].salary });
+    io.to(code).emit('updatePlayers', rooms[code].players, rooms[code].bankerId, rooms[code].salary);
   });
 
   // Player joins a room
@@ -60,18 +62,50 @@ io.on('connection', (socket) => {
     socket.data.room = code;
     socket.data.role = 'player';
     socket.join(code);
-    io.to(socket.id).emit('roomJoined', { code, players: rooms[code].players, bankerId: rooms[code].bankerId });
-    io.to(code).emit('updatePlayers', rooms[code].players);
+    io.to(socket.id).emit('roomJoined', { code, players: rooms[code].players, bankerId: rooms[code].bankerId, salary: rooms[code].salary });
+    io.to(code).emit('updatePlayers', rooms[code].players, rooms[code].bankerId, rooms[code].salary);
   });
 
-  // Banker adds/removes money
+  // Banker adds/removes money (quick or custom)
   socket.on('changeBalance', ({ playerId, amount }) => {
     const { room, role } = socket.data;
     if (!room || role !== 'banker') return;
     if (rooms[room] && rooms[room].players[playerId]) {
       rooms[room].players[playerId].balance += amount;
-      io.to(room).emit('updatePlayers', rooms[room].players);
+      io.to(room).emit('updatePlayers', rooms[room].players, rooms[room].bankerId, rooms[room].salary);
     }
+  });
+
+  // Banker sets salary amount
+  socket.on('setSalary', (amount) => {
+    const { room, role } = socket.data;
+    if (!room || role !== 'banker') return;
+    if (typeof amount === 'number' && amount > 0 && amount < 10000) {
+      rooms[room].salary = amount;
+      io.to(room).emit('updatePlayers', rooms[room].players, rooms[room].bankerId, rooms[room].salary);
+    }
+  });
+
+  // Banker gives salary to a player
+  socket.on('giveSalary', (playerId) => {
+    const { room, role } = socket.data;
+    if (!room || role !== 'banker') return;
+    if (rooms[room] && rooms[room].players[playerId]) {
+      rooms[room].players[playerId].balance += rooms[room].salary;
+      io.to(room).emit('updatePlayers', rooms[room].players, rooms[room].bankerId, rooms[room].salary);
+    }
+  });
+
+  // Player pays another player
+  socket.on('playerPay', ({ toId, amount }) => {
+    const { room } = socket.data;
+    if (!room || !rooms[room]) return;
+    if (!rooms[room].players[socket.id] || !rooms[room].players[toId]) return;
+    if (typeof amount !== 'number' || amount <= 0 || amount > 100000) return;
+    if (rooms[room].players[socket.id].balance < amount) return;
+    rooms[room].players[socket.id].balance -= amount;
+    rooms[room].players[toId].balance += amount;
+    io.to(room).emit('updatePlayers', rooms[room].players, rooms[room].bankerId, rooms[room].salary);
   });
 
   // Banker resets the game
@@ -79,7 +113,8 @@ io.on('connection', (socket) => {
     const { room, role } = socket.data;
     if (!room || role !== 'banker') return;
     Object.values(rooms[room].players).forEach(player => player.balance = 1500);
-    io.to(room).emit('updatePlayers', rooms[room].players);
+    rooms[room].salary = 200;
+    io.to(room).emit('updatePlayers', rooms[room].players, rooms[room].bankerId, rooms[room].salary);
   });
 
   // Handle player disconnect
@@ -92,7 +127,7 @@ io.on('connection', (socket) => {
       delete rooms[room];
       io.to(room).emit('roomClosed');
     } else {
-      io.to(room).emit('updatePlayers', rooms[room].players);
+      io.to(room).emit('updatePlayers', rooms[room].players, rooms[room].bankerId, rooms[room].salary);
     }
   });
 });

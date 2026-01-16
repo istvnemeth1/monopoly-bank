@@ -22,7 +22,19 @@
       <div id="players"></div>
       <div id="bankerControls" style="display:none;">
         <h3>Banker Controls</h3>
+        <div style="margin-bottom:1em;">
+          <label for="salaryInput"><b>Salary amount (£):</b></label>
+          <input id="salaryInput" type="number" min="1" max="10000" value="200" style="width:100px;display:inline-block;" />
+          <button id="setSalaryBtn">Set</button>
+        </div>
         <button id="resetBtn">Reset Game</button>
+      <div id="playerPay" style="margin:1em 0;display:none;">
+        <h3>Pay Another Player</h3>
+        <select id="payTo"></select>
+        <input id="payAmount" type="number" min="1" placeholder="Amount (£)" style="width:100px;" />
+        <button id="payBtn">Pay</button>
+        <div id="payError" class="error"></div>
+      </div>
       </div>
       <button id="leaveBtn">Leave Room</button>
     </div>
@@ -30,6 +42,16 @@
       <h2>Room closed by Banker.</h2>
       <button onclick="location.reload()">Back to Start</button>
     </div>
+  <!-- Modal for custom add/remove (banker) -->
+  <div id="customModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0008;z-index:10;align-items:center;justify-content:center;">
+    <div style="background:#fff;padding:2em;border-radius:10px;max-width:90vw;">
+      <h3 id="customModalTitle"></h3>
+      <input id="customAmountInput" type="number" min="1" max="100000" style="width:120px;" />
+      <button id="customAmountConfirm">OK</button>
+      <button id="customAmountCancel">Cancel</button>
+      <div id="customAmountError" class="error"></div>
+    </div>
+  </div>
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
